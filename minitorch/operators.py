@@ -5,23 +5,23 @@ from typing import Callable, Iterable
 
 
 def mul(x: float, y: float) -> float:
-    """Multiply two numbers."""
+    """f(x, y) = x * y"""
     return x * y
 
 
 def id(x: float) -> float:
-    """Identity function."""
+    """f(x) = x"""
     return x
 
 
 def add(x: float, y: float) -> float:
-    """Add two numbers."""
+    """f(x, y) = x + y"""
     return x + y
 
 
 def neg(x: float) -> float:
-    """Negate a number. Enforce the returned type to float."""
-    return float(-x)
+    """f(x) = -x"""
+    return -x
 
 
 def lt(x: float, y: float) -> float:
@@ -30,34 +30,28 @@ def lt(x: float, y: float) -> float:
 
 
 def eq(x: float, y: float) -> float:
-    """Check if x is equal to y."""
+    """f(x) = 1.0 if x == y else 0.0"""
     return 1.0 if x == y else 0.0
 
 
 def max(x: float, y: float) -> float:
-    """Return the maximum of two numbers."""
+    """f(x) = x if x > y else y"""
     return x if x > y else y
 
 
 def is_close(x: float, y: float) -> bool:
-    """Check if x is close to y. f(x) = |x - y| < 1e-2"""
-    return abs(x - y) < 1e-2
+    """f(x) = |x - y| < 1e-2"""
+    return (x - y < 1e-2) and (y - x < 1e-2)
 
 
 def sigmoid(x: float) -> float:
     """Compute the sigmoid function.
 
-    $f(x) =  1.0/(1.0 + e^{-x})$ if x >=0 else $e^x/(1.0 + e^{x})$.
+    Calculate as
 
-    sigmoid function is splitted into two parts to avoid overflow.
-    math.exp(-x) will be relatively small for large positive x. math.exp(x) will be relatively small for large negative x.
+    $f(x) =  1.0/(1.0 + e^{-x})$ if x >=0 else $e^x/(1.0 + e^{x})$
 
-    Args:
-        x: Input to the function.
-
-    Returns:
-        float: The output of the sigmoid function.
-
+    for stability.
     """
     if x >= 0:
         return 1.0 / (1.0 + math.exp(-x))
@@ -68,37 +62,37 @@ def sigmoid(x: float) -> float:
 def relu(x: float) -> float:
     """Compute the ReLU function.
 
-    $f(x) = x$ if x > 0 else 0
+    f(x) = x if x > 0 else 0
     """
-    return max(0.0, x)
+    return x if x > 0 else 0.0
 
 
 EPS = 1e-6
 
 
 def log(x: float) -> float:
-    """Compute the natural logarithm."""
+    """f(x) = log(x)"""
     return math.log(x + EPS)
 
 
 def exp(x: float) -> float:
-    """Compute the exponential function."""
+    """f(x) = e^x"""
     return math.exp(x)
 
 
 def inv(x: float) -> float:
-    """Compute the inverse of a number."""
-    return 1.0 / (x)
+    """f(x) = 1/x"""
+    return 1.0 / x
 
 
 def log_back(x: float, d: float) -> float:
-    """Computes the derivative of log(x)*d over x."""
+    """Compute the derivative of log(x) over x."""
     return d / (x + EPS)
 
 
 def inv_back(x: float, d: float) -> float:
     """Compute the derivative of d/x over x."""
-    return -d / (x**2)
+    return -(1.0 / x**2) * d
 
 
 def relu_back(x: float, d: float) -> float:
@@ -110,7 +104,10 @@ def map(f: Callable[[float], float]) -> Callable[[Iterable[float]], Iterable[flo
     """Higher-order function that applies a given function to each element of an iterable and returns a list of results."""
 
     def _map(ls: Iterable[float]) -> Iterable[float]:
-        return [f(i) for i in ls]
+        ret = []
+        for x in ls:
+            ret.append(f(x))
+        return ret
 
     return _map
 
@@ -126,7 +123,10 @@ def zipWith(
     """Higher-order function that combines elements from two iterables using a given function. It only performs on the minimum length of the two iterables."""
 
     def _zipWith(ls1: Iterable[float], ls2: Iterable[float]) -> Iterable[float]:
-        return [f(x, y) for x, y in zip(ls1, ls2)]
+        ret = []
+        for x, y in zip(ls1, ls2):
+            ret.append(f(x, y))
+        return ret
 
     return _zipWith
 

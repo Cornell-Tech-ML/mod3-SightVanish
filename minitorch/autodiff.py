@@ -22,10 +22,11 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
 
     """
     x_1 = [v for v in vals]
-    x_1[arg] += epsilon
+    x_1[arg] = x_1[arg] + epsilon
     x_2 = [v for v in vals]
-    x_2[arg] -= epsilon
-    return (f(*x_1) - f(*x_2)) / (2.0 * epsilon)
+    x_2[arg] = x_2[arg] - epsilon
+    delta = f(*x_1) - f(*x_2)
+    return delta / (2.0 * epsilon)
 
 
 variable_count = 1
@@ -71,10 +72,10 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
                     dfs_sort(p)
         # this node is visited only if all its parents are visited
         visited.add(var.unique_id)
-        order.append(var)
+        order.insert(0, var)
 
     dfs_sort(variable)
-    return order[::-1]
+    return order
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -95,15 +96,15 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
     derivatives = {}
     derivatives[variable.unique_id] = deriv
     for var in order:
+        deriv = derivatives[var.unique_id]
         if var.is_leaf():
-            var.accumulate_derivative(derivatives[var.unique_id])
+            var.accumulate_derivative(deriv)
         else:
-            for parent, d in var.chain_rule(derivatives[var.unique_id]):
-                if not parent.is_constant():
-                    if parent.unique_id not in derivatives:
-                        derivatives[parent.unique_id] = d
-                    else:
-                        derivatives[parent.unique_id] += d
+            for parent, d in var.chain_rule(deriv):
+                if parent.is_constant():
+                    continue
+                derivatives.setdefault(parent.unique_id, 0)
+                derivatives[parent.unique_id] = derivatives[parent.unique_id] + d
 
 
 @dataclass

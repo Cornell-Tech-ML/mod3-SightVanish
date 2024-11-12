@@ -6,8 +6,6 @@ from typing import Any, Iterable, Optional, Sequence, Tuple, Type, Union
 import numpy as np
 
 from dataclasses import field
-
-# from sympy import Derivative
 from .autodiff import Context, Variable, backpropagate, central_difference
 from .scalar_functions import (
     EQ,
@@ -81,7 +79,7 @@ class Scalar:
         return LT.apply(b, self)
 
     def __sub__(self, b: ScalarLike) -> Scalar:
-        return Add.apply(self, Neg.apply(b))
+        return Add.apply(self, -b)
 
     def __neg__(self) -> Scalar:
         return Neg.apply(self)
@@ -164,7 +162,7 @@ class Scalar:
         assert h.ctx is not None
 
         derivative = h.last_fn._backward(h.ctx, d_output)
-        return zip(h.inputs, derivative)
+        return list(zip(h.inputs, derivative))
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.

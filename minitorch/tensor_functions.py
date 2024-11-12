@@ -122,8 +122,9 @@ class Mul(Function):
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
         """Backward of tensor Mul."""
         a, b = ctx.saved_values
-        return grad_output.f.mul_zip(grad_output, b), grad_output.f.mul_zip(
-            grad_output, a
+        return (
+            grad_output.f.mul_zip(grad_output, b),
+            grad_output.f.mul_zip(grad_output, a),
         )
 
 
@@ -140,9 +141,7 @@ class Sigmoid(Function):
         """Backward of tensor Sigmoid."""
         # may be wrong with "1.0 - "
         (sigma,) = ctx.saved_values
-        return grad_output.f.mul_zip(
-            grad_output.f.mul_zip(sigma, (1.0 - sigma)), grad_output
-        )
+        return sigma * (-sigma + 1.0) * grad_output
 
 
 class ReLU(Function):
@@ -164,7 +163,8 @@ class Log(Function):
     def forward(ctx: Context, a: Tensor) -> Tensor:
         """Log function for tensor."""
         ctx.save_for_backward(a)
-        return a.f.log_map(a)
+        out = a.f.log_map(a)
+        return out
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
@@ -240,7 +240,7 @@ class Permute(Function):
     def forward(ctx: Context, a: Tensor, order: Tensor) -> Tensor:
         """Permute the dimensions of the tensor."""
         ctx.save_for_backward(order)
-        return a._new(a._tensor.permute(*[int(i) for i in order._tensor._storage]))
+        return a._new(a._tensor.permute(*[int(order[i]) for i in range(order.size)]))
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
@@ -248,7 +248,7 @@ class Permute(Function):
         (order,) = ctx.saved_values
         order_list = [int(i) for i in order._tensor._storage]
         reverse_order = [order_list.index(i) for i in range(len(order_list))]
-        return grad_output.permute(*reverse_order), 0.0
+        return grad_output._new(grad_output._tensor.permute(*reverse_order)), 0.0
 
 
 class View(Function):

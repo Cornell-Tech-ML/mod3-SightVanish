@@ -98,7 +98,7 @@ class EQ(ScalarFunction):
     @staticmethod
     def forward(ctx: Context, a: float, b: float) -> float:
         """Return 1 if a == b, 0 otherwise."""
-        return operators.eq(a, b)
+        return 1.0 if a == b else 0.0
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
@@ -112,7 +112,7 @@ class LT(ScalarFunction):
     @staticmethod
     def forward(ctx: Context, a: float, b: float) -> float:
         """Return 1 if a < b, 0 otherwise."""
-        return operators.lt(a, b)
+        return 1.0 if a < b else 0.0
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
@@ -163,13 +163,14 @@ class Mul(ScalarFunction):
     def forward(ctx: Context, a: float, b: float) -> float:
         """Return a * b."""
         ctx.save_for_backward(a, b)
-        return operators.mul(a, b)
+        c = a * b
+        return c
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, float]:
         """Return the derivative of the output."""
-        (a, b) = ctx.saved_values
-        return operators.mul(b, d_output), operators.mul(a, d_output)
+        a, b = ctx.saved_values
+        return b * d_output, a * d_output
 
 
 class Neg(ScalarFunction):

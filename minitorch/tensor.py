@@ -298,7 +298,7 @@ class Tensor:
 
     @property
     def dims(self) -> int:
-        """Return the number of dimensions of the tensor."""
+        """Return the dimensionality of the tensor."""
         return self._tensor.dims
 
     # Functions
@@ -311,7 +311,7 @@ class Tensor:
         return Add.apply(self, self._ensure_tensor(b))
 
     def __sub__(self, b: TensorLike) -> Tensor:
-        return Add.apply(self, Neg.apply(self._ensure_tensor(b)))
+        return Add.apply(self, -self._ensure_tensor(b))
 
     def __mul__(self, b: TensorLike) -> Tensor:
         return Mul.apply(self, self._ensure_tensor(b))
@@ -319,7 +319,7 @@ class Tensor:
     def __lt__(self, b: TensorLike) -> Tensor:
         return LT.apply(self, self._ensure_tensor(b))
 
-    def __eq__(self, b: TensorLike) -> Tensor:  # type: ignore
+    def __eq__(self, b: TensorLike) -> Tensor:  # type: ignore[override]
         return EQ.apply(self, self._ensure_tensor(b))
 
     def __gt__(self, b: TensorLike) -> Tensor:
@@ -332,8 +332,7 @@ class Tensor:
         return self + b
 
     def __rsub__(self, b: TensorLike) -> Tensor:
-        # b - self
-        return Neg.apply(self) + b
+        return -self + b
 
     def __rmul__(self, b: TensorLike) -> Tensor:
         return self * b
@@ -341,7 +340,7 @@ class Tensor:
     def all(self, dim: Optional[int] = None) -> Tensor:
         """Check if all elements are true."""
         if dim is None:
-            return All.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
+            return All.apply(self.view(self.size), self._ensure_tensor(0))
         else:
             return All.apply(self, self._ensure_tensor(dim))
 
@@ -378,7 +377,7 @@ class Tensor:
         if dim is None:
             return self.sum() / self.size
         else:
-            return self.sum(dim) / self.shape[int(self._ensure_tensor(dim).item())]
+            return self.sum(dim) / self.shape[dim]
 
     def permute(self, *order: int) -> Tensor:
         """Permute the dimensions of the tensor."""

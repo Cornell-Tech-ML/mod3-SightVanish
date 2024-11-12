@@ -31,29 +31,30 @@ class Module:
 
     def train(self) -> None:
         """Set the `training` flag of this and descendent to true."""
-        self.training = True
         for descendant in self.modules():
             descendant.train()
+        self.training = True
 
     def eval(self) -> None:
         """Set the `training` flag of this and descendent to false."""
-        self.training = False
         for descendant in self.modules():
             descendant.eval()
+        self.training = False
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
         """Collect all the parameters of this module and its descendents.
 
         Returns:
+        -------
             The name and `Parameter` of each ancestor parameter.
 
         """
         parameters = {}
-        for key, parameter in self._parameters.items():
-            parameters[key] = parameter
-        for key, module in self._modules.items():
-            for name, parameter in module.named_parameters():
-                parameters[key + "." + name] = parameter
+        for k, v in self._parameters.items():
+            parameters[k] = v
+        for mod_name, module in self._modules.items():
+            for k, v in module.named_parameters():
+                parameters[f"{mod_name}.{k}"] = v
         return list(parameters.items())
 
     def parameters(self) -> Sequence[Parameter]:
