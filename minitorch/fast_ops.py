@@ -168,14 +168,15 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-
-        stride_aligned = np.array_equal(out_strides, in_strides) and np.array_equal(out_shape, in_shape)
+        stride_aligned = np.array_equal(out_strides, in_strides) and np.array_equal(
+            out_shape, in_shape
+        )
         if stride_aligned:
             for ordinal in prange(len(out)):
                 # if strides are aligned, we can avoid indexing
                 out[ordinal] = fn(in_storage[ordinal])
         else:
-            for ordinal in prange(len(out)): 
+            for ordinal in prange(len(out)):
                 out_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
                 in_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
                 # ordinal -> index
@@ -224,10 +225,10 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         stride_aligned = (
-            np.array_equal(out_strides, a_strides) and 
-            np.array_equal(out_strides, b_strides) and 
-            np.array_equal(out_shape, a_shape) and 
-            np.array_equal(out_shape, b_shape)
+            np.array_equal(out_strides, a_strides)
+            and np.array_equal(out_strides, b_strides)
+            and np.array_equal(out_shape, a_shape)
+            and np.array_equal(out_shape, b_shape)
         )
         if stride_aligned:
             for ordinal in prange(len(out)):
@@ -344,12 +345,21 @@ def _tensor_matrix_multiply(
         None : Fills in `out`
 
     """
+    # we assume a 3D matrix and the first dimension is the batch size
+    assert a_shape[-1] == b_shape[-2]
+    # get the column size
+    column_size = a_shape[-1]
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
-
-    # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
-
+    for i in prange(out_shape[0]):
+        for j in range(out_shape[1]):
+            for k in range(out_shape[2]):
+                temp = 0.0
+                a_pos = i * a_batch_stride + j * a_strides[1]
+                b_pos = i * b_batch_stride + k * b_strides[2]
+                for n in range(column_size):
+                    temp += a_storage[a_pos + n * a_strides[2]] * b_storage[b_pos + n * b_strides[1]]
+                out[i * out_strides[0] + j * out_strides[1] + k * out_strides[2]] = temp
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None
