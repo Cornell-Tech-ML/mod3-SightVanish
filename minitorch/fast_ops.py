@@ -30,6 +30,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator to JIT compile functions with NUMBA."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -358,8 +359,12 @@ def _tensor_matrix_multiply(
                 a_pos = i * a_batch_stride + j * a_strides[1]
                 b_pos = i * b_batch_stride + k * b_strides[2]
                 for n in range(column_size):
-                    temp += a_storage[a_pos + n * a_strides[2]] * b_storage[b_pos + n * b_strides[1]]
+                    temp += (
+                        a_storage[a_pos + n * a_strides[2]]
+                        * b_storage[b_pos + n * b_strides[1]]
+                    )
                 out[i * out_strides[0] + j * out_strides[1] + k * out_strides[2]] = temp
+
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None
