@@ -397,15 +397,17 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     cache_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
-
+    # copy to shared memory
     if i < size and j < size:
         cache_a[i, j] = a[i * size + j]
         cache_b[i, j] = b[i * size + j]
     cuda.syncthreads()
+    # compute out[i, j] += a[i, k] * b[k, j]
     tmp = 0.0
     if i < size and j < size:
         for k in range(size):
             tmp += cache_a[i, k] * cache_b[k, j]
+        # write the result to global memory
         out[i * size + j] = tmp
 
 
@@ -453,6 +455,7 @@ def _tensor_matrix_multiply(
     Returns:
         None : Fills in `out`
     """
+    # Check that the shapes are compatible
     assert a_shape[-1] == b_shape[-2]
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
@@ -488,12 +491,10 @@ def _tensor_matrix_multiply(
             ]
         else:
             b_shared[pi, pj] = 0.0  # Initialize invalid elements to 0.0
-        # Synchronize threads to ensure shared memory is fully loaded
         cuda.syncthreads()
         # Compute the dot product
         for k in range(min(BLOCK_DIM, a_shape[-1] - idx)):  # Handle partial tiles
             tmp += a_shared[pi, k] * b_shared[k, pj]
-        # Synchronize threads before loading the next tile
         cuda.syncthreads()
 
     # Write the result to global memory
