@@ -269,6 +269,27 @@ No allocation hoisting found
 None
 ```
 
+# Task 3.4 CUDA vs. FastOps
+
+```
+Timing summary
+Size: 64
+    fast: 0.00421
+    gpu: 0.00778
+Size: 128
+    fast: 0.01909
+    gpu: 0.01496
+Size: 256
+    fast: 0.09510
+    gpu: 0.05267
+Size: 512
+    fast: 1.12510
+    gpu: 0.26931
+Size: 1024
+    fast: 7.81901
+    gpu: 1.03830
+```
+
 # Task 3.5 Training
 
 ## Tensor Model CPU
