@@ -172,14 +172,15 @@ def tensor_map(
         stride_aligned = np.array_equal(out_strides, in_strides) and np.array_equal(
             out_shape, in_shape
         )
+        index: Index = np.zeros((2, len(out), MAX_DIMS), dtype=np.int32)
         if stride_aligned:
             for ordinal in prange(len(out)):
                 # if strides are aligned, we can avoid indexing
                 out[ordinal] = fn(in_storage[ordinal])
         else:
             for ordinal in prange(len(out)):
-                out_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
-                in_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
+                out_index = index[0, ordinal]
+                in_index = index[1, ordinal]
                 # ordinal -> index
                 to_index(ordinal, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
@@ -231,15 +232,16 @@ def tensor_zip(
             and np.array_equal(out_shape, a_shape)
             and np.array_equal(out_shape, b_shape)
         )
+        index = np.zeros((3, len(out), MAX_DIMS), dtype=np.int32)
         if stride_aligned:
             for ordinal in prange(len(out)):
                 # if strides are aligned, we can avoid indexing
                 out[ordinal] = fn(a_storage[ordinal], b_storage[ordinal])
         else:
             for ordinal in prange(len(out)):
-                out_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
-                a_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
-                b_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
+                out_index = index[0, ordinal]
+                a_index = index[1, ordinal]
+                b_index = index[2, ordinal]
                 # ordinal -> index
                 to_index(ordinal, out_shape, out_index)
                 broadcast_index(out_index, out_shape, a_shape, a_index)
@@ -285,8 +287,9 @@ def tensor_reduce(
     ) -> None:
         reduce_size = a_shape[reduce_dim]
         # go through all index, starting from [0,0,0]
+        index: Index = np.zeros((len(out), MAX_DIMS), dtype=np.int32)
         for ordinal in prange(len(out)):
-            out_index: Index = np.zeros(MAX_DIMS, dtype=np.int32)
+            out_index = index[ordinal]
             # ordinal -> index
             to_index(ordinal, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
