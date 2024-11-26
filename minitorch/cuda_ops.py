@@ -402,7 +402,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     accum = 0.0
     for k in range(size):
-        acuum += cache_a[i, k] * cache_b[k, j]
+        accum += cache_a[i, k] * cache_b[k, j]
     # write the result to global memory
     out[i * size + j] = accum
 
