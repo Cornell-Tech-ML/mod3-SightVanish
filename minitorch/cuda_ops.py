@@ -391,8 +391,8 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     BLOCK_DIM = 32
     cache_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     cache_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
-    j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+    i = cuda.threadIdx.x
+    j = cuda.threadIdx.y
     if i >= size and j >= size:
         return
     
