@@ -1,6 +1,5 @@
 # type: ignore
 
-from re import L
 from typing import Callable, Optional, TypeVar, Any
 
 import numba
@@ -388,23 +387,44 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
         size (int): size of the square
 
     """
-    BLOCK_DIM = 32
-    cache_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    cache_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
-    j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
-    if i >= size and j >= size:
-        return
+    # BLOCK_DIM = 32
+    # cache_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    # cache_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    # i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    # j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+    # if i >= size and j >= size:
+    #     return
     
-    cache_a[i, j] = a[i * size + j]
-    cache_b[i, j] = b[i * size + j]
-    cuda.syncthreads()
+    # cache_a[i, j] = a[i * size + j]
+    # cache_b[i, j] = b[i * size + j]
+    # cuda.syncthreads()
 
-    accum = 0.0
-    for k in range(size):
-        accum += cache_a[i, k] * cache_b[k, j]
-    # write the result to global memory
-    out[i * size + j] = accum
+    # accum = 0.0
+    # for k in range(size):
+    #     accum += cache_a[i, k] * cache_b[k, j]
+    # # write the result to global memory
+    # out[i * size + j] = accum
+    BLOCK_DIM = 32
+    # TODO: Implement for Task 3.3.
+    # raise NotImplementedError("Need to implement for Task 3.3")
+    # Creates useful references like in other problems
+    x = cuda.blockIdx.x * BLOCK_DIM + cuda.threadIdx.x  # Defines the
+    y = cuda.blockIdx.y * BLOCK_DIM + cuda.threadIdx.y
+    shared_memory_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_memory_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+
+    if x < size and y < size:  # Guard Rails
+        shared_memory_a[x, y] = a[x * size + y]  # Writes to the storage in a
+        shared_memory_b[x, y] = b[x * size + y]  # Writes to the storage in b
+    cuda.syncthreads()  # Syncs the threads
+    if x < size and y < size:  # Guard Rails
+        acc = 0  # Local dummy variable
+        for k in range(size):  # For loop to go through the size
+            acc += (
+                shared_memory_a[x, k] * shared_memory_b[k, y]
+            )  # Multiplies the shared memories and adds them to the accumulator
+        out[x * size + y] = acc  # Writes to the output with our accumulator
+    
 
 
 jit_mm_practice = jit(_mm_practice)
@@ -451,8 +471,44 @@ def _tensor_matrix_multiply(
     Returns:
         None : Fills in `out`
     """
-    # Check that the shapes are compatible
-    assert a_shape[-1] == b_shape[-2]
+    # # Check that the shapes are compatible
+    # assert a_shape[-1] == b_shape[-2]
+    # a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
+    # b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
+    # # Batch dimension - fixed
+    # batch = cuda.blockIdx.z
+
+    # BLOCK_DIM = 32
+    # a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    # b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    # # The final position c[i, j]
+    # i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    # j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+
+    # # The local position in the block.
+    # pi = cuda.threadIdx.x
+    # pj = cuda.threadIdx.y
+
+    # accum = 0.0
+    # for k_start in range(0, a_shape[2], BLOCK_DIM):
+    #     k = k_start + pj
+    #     if i < a_shape[1] and k < a_shape[2]:
+    #         a_shared[pi, pj] = a_storage[
+    #             batch * a_batch_stride + i * a_strides[1] + k * a_strides[2]
+    #         ]
+    #     k = k_start + pi
+    #     if j < b_shape[2] and k < b_shape[1]:
+    #         b_shared[pi, pj] = b_storage[
+    #             batch * b_batch_stride + k * b_strides[1] + j * b_strides[2]
+    #         ]
+    #     cuda.syncthreads()
+        
+    #     for k in range(BLOCK_DIM):
+    #         if (k_start + k) < a_shape[2]:
+    #             accum += a_shared[pi, k] * b_shared[k, pj]
+    
+    # if i < out_shape[1] and j < out_shape[2]:
+    #     out[out_strides[0] * batch + i * out_strides[1] + j * out_strides[2]] = accum
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
     # Batch dimension - fixed
@@ -461,6 +517,7 @@ def _tensor_matrix_multiply(
     BLOCK_DIM = 32
     a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+
     # The final position c[i, j]
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
@@ -469,26 +526,55 @@ def _tensor_matrix_multiply(
     pi = cuda.threadIdx.x
     pj = cuda.threadIdx.y
 
-    accum = 0.0
-    for k_start in range(0, a_shape[2], BLOCK_DIM):
-        k = k_start + pj
-        if i < a_shape[1] and k < a_shape[2]:
-            a_shared[pi, pj] = a_storage[
-                batch * a_batch_stride + i * a_strides[1] + k * a_strides[2]
-            ]
-        k = k_start + pi
-        if j < b_shape[2] and k < b_shape[1]:
-            b_shared[pi, pj] = b_storage[
-                batch * b_batch_stride + k * b_strides[1] + j * b_strides[2]
-            ]
-        cuda.syncthreads()
-        
+    # Defines the max blocks
+    MAX_BLOCKS = a_shape[2]
+
+    # Creates the same accumulator variable
+    acc = 0
+
+    # Code Plan:
+    # 1) Move across shared dimension by block dim.
+    #    a) Copy into shared memory for a matrix.
+    #    b) Copy into shared memory for b matrix
+    #    c) Compute the dot produce for position c[i, j]
+    # TODO: Implement for Task 3.4.
+
+    # raise NotImplementedError("Need to implement for Task 3.4")
+    # NOTE I took refernce form this numba docs and heaily from the GPU Puzzlers
+    # Reference link: https://numba.readthedocs.io/en/stable/cuda/examples.html#matrix-multiplication
+    # Reference code from GPU Puzzlers for this and other cuda functions 
+
+    # 1) Move across shared dimension by block dim.
+    for s in range(0, MAX_BLOCKS, BLOCK_DIM):  # Loops over each block
+        pj_off = s + pj  # Defines local index for threadIdX
+        pi_off = s + pi  # Defines local index for threadIdY
+
+        # a) Copy into shared memory for a matrix.
+        if i < a_shape[1] and pj_off < MAX_BLOCKS:
+            a_store = (
+                a_batch_stride * batch + a_strides[1] * i + a_strides[2] * pj_off
+            )  # Getting position of a_storage
+            a_shared[pi, pj] = a_storage[a_store]  # Copying into shared memory
+
+        # b) Copy into shared memory for b matrix
+        if pi_off < b_shape[1] and j < b_shape[2]:
+            b_store = (
+                b_batch_stride * batch + b_strides[1] * pi_off + b_strides[2] * j
+            )  # Getting position of a_storage
+            b_shared[pi, pj] = b_storage[b_store]  # Copying into shared memory
+
+        cuda.syncthreads()  # Syncs the threads, NOTE we only need one cuda.syncthreads() call
+
+        # Finds the dot product and sums over the relevant row and column for a and b respectively
         for k in range(BLOCK_DIM):
-            if (k_start + k) < a_shape[2]:
-                accum += a_shared[pi, k] * b_shared[k, pj]
-    
+            if (k + s) < MAX_BLOCKS:
+                acc += a_shared[pi, k] * b_shared[k, pj]
+
+    # c) Compute the dot produce for position c[i, j]
+    # Finds the correct position for each
     if i < out_shape[1] and j < out_shape[2]:
-        out[out_strides[0] * batch + i * out_strides[1] + j * out_strides[2]] = accum
+        out_loc = out_strides[0] * batch + out_strides[1] * i + out_strides[2] * j
+        out[out_loc] = acc
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
